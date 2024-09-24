@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prelim Calculator</title>
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <script>
+        function checkAttendance() {
+            const attendance_absences = parseInt(document.getElementById('attendance_absences').value);
+            const result = attendance_absences >= 4 ? "FAILED" : "";
+            document.getElementById('result').textContent = result;
+            document.getElementById('inputted_prelim_grade').textContent = "";
+            document.getElementById('prelim_result').textContent = "";
+            document.getElementById('midterm_final_result').textContent = "";
+            document.getElementById('dean_result').textContent = "";
+        }
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <div class="container">
+            <h1>Preliminary Grade Calculator</h1>
+            <form oninput="checkAttendance()" id="gradeForm">
+                <div>
+                    <label for="attendance_absences">Number of Consecutive Absences:</label>
+                    <input type="number" id="attendance_absences" value="0" min="0" max="100" placeholder="Enter Number of Absences">
+                </div>
+            </form>
+            <form id="gradeForm">
+                <div>
+                    <label for="recitation_score">Recitation Score:</label>
+                    <input type="number" id="recitation_score" min="1" max="100" placeholder="Enter Recitation Score: 0-100">
+                </div>
+                <div>
+                    <label for="quiz_score">Quiz Score:</label>
+                    <input type="number" id="quiz_score" min="1" max="100" placeholder="Enter Quiz Score: 0-100">
+                </div>
+                <div>
+                    <label for="requirements_grade">Requirements Grade:</label>
+                    <input type="number" id="requirements_grade" min="1" max="100" placeholder="Enter Requirements Grade: 0-100">
+                </div>
+                <div>
+                    <label for="prelim_exam_score">Prelim Exam Score:</label>
+                    <input type="number" id="prelim_exam_score" min="1" max="100" placeholder="Enter Prelim Exam Score: 0-100">
+                </div>
+                <button type="button" id="calculate_button">Calculate Final Grade</button>
+            </form>
+            <div class="result"></div>
+            <h2>Result:</h2>
+            <div id="result" class="result"></div>
+            <div id="inputted_prelim_grade" class="inputted_prelim_grade"></div>
+            <div id="prelim_result" class="prelim_result"></div>
+            <div id="midterm_final_result" class="midterm_final_result"></div>
+            <div id="dean_result" class="dean_result"></div>
+        </div>
+    </div>
+
+    <py-script>
+        def calculate_attendance_grade(attendance_absences):
+            if attendance_absences >= 4:
+                return "FAILED", None
+            attendance_score = max(0, 100 - (attendance_absences * 10))
+            return attendance_score
+        
+        def calculate_class_standing(quiz_score, requirements_grade, recitation_score):
+            class_standing = (quiz_score * 0.40) + (requirements_grade * 0.30) + (recitation_score * 0.30)
+            return class_standing
+        
+        def calculate_prelim_grade(attendance_absences, quiz_score, requirements_grade, recitation_score, prelim_exam_score):
+            attendance_score = calculate_attendance_grade(attendance_absences)
+            if isinstance(attendance_score, str):  # "FAILED" result
+                return attendance_score, None
+            class_standing = calculate_class_standing(quiz_score, requirements_grade, recitation_score)
+            prelim_grade = (prelim_exam_score * 0.60) + (attendance_score * 0.10) + (class_standing * 0.30)
+            return prelim_grade
+        
+        def required_grades_for_target(prelim_grade, target):
+            required_midterm = (target - (prelim_grade * 0.20)) / 0.80
+            required_final = (target - (prelim_grade * 0.20 + required_midterm * 0.30)) / 0.50
+            return required_midterm, required_final
+        
+        def calculateFinalGrade(event):
+            inputted_prelim_grade = ""
+            prelim_result = ""
+            midterm_final_result = ""
+            dean_result = ""
+            result = ""
+            
+            try:
+                attendance_absences = Element("attendance_absences").value
+                quiz_score = Element("quiz_score").value
+                requirements_grade = Element("requirements_grade").value
+                recitation_score = Element("recitation_score").value
+                prelim_exam_score = Element("prelim_exam_score").value
+                
+                if not attendance_absences or not quiz_score or not requirements_grade or not recitation_score or not prelim_exam_score:
+                    raise ValueError("Missing or invalid inputs")
+                
+                attendance_absences = int(attendance_absences)
+                quiz_score = float(quiz_score)
+                requirements_grade = float(requirements_grade)
+                recitation_score = float(recitation_score)
+                prelim_exam_score = float(prelim_exam_score)
+                
+                if not (0 <= attendance_absences <= 100) or not (0 <= quiz_score <= 100) or not (0 <= requirements_grade <= 100) or not (0 <= recitation_score <= 100) or not (0 <= prelim_exam_score <= 100):
+                    raise ValueError("Input must be between 0-100")
+                
+                prelim_grade = calculate_prelim_grade(attendance_absences, quiz_score, requirements_grade, recitation_score, prelim_exam_score)
+                if isinstance(prelim_grade, str):  # "FAILED" case
+                    inputted_prelim_grade = f"Result: {prelim_grade}"
+                else:
+                    inputted_prelim_grade = f"Your Prelim Grade is: {prelim_grade:.2f}%"
+                
+                if prelim_grade < 75:
+                    prelim_result = "You need to achieve higher grades in the midterm and final exams."
+                    required_midterm, required_final = required_grades_for_target(prelim_grade, 75)
+                    midterm_final_result = f"To pass: Midterm grade of {required_midterm:.2f}, Final grade of {required_final:.2f}."
+                else:
+                    prelim_result = "You are passing so far!"
+                    required_midterm, required_final = required_grades_for_target(prelim_grade, 75)
+                    midterm_final_result = f"To maintain your grade: Midterm grade of {required_midterm:.2f}, Final grade of {required_final:.2f}."
+                
+                if prelim_grade >= 90:
+                    dean_result = "You are on track for the Dean's List!"
+                else:
+                    dean_result = "You need higher grades to qualify for the Dean's List."
+
+            except ValueError as e:
+                result = f"Error: {str(e)}"
+                Element("inputted_prelim_grade").element.innerText = ""
+                Element("prelim_result").element.innerText = ""
+                Element("midterm_final_result").element.innerText = ""
+                Element("dean_result").element.innerText = ""
+            
+            Element("result").element.innerText = result
+            Element("inputted_prelim_grade").element.innerText = inputted_prelim_grade
+            Element("prelim_result").element.innerText = prelim_result
+            Element("midterm_final_result").element.innerText = midterm_final_result
+            Element("dean_result").element.innerText = dean_result
+
+        Element("calculate_button").element.onclick = calculateFinalGrade
+    </py-script>
+</body>
+</html>
